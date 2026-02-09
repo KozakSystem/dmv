@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DMV Routes Trainer</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="app">
+    <header class="header">
+      <div>
+        <h1>DMV Routes Trainer</h1>
+        <p class="subtitle">Тренуй 3 маршрути: спочатку ідеальний маршрут, потім перевірка памʼяті.</p>
+      </div>
+      <div class="controls">
+        <label class="file">
+          <span>Мапа (PNG/JPG)</span>
+          <input id="bgInput" type="file" accept="image/*" />
+        </label>
+      </div>
+    </header>
+
+    <section class="toolbar">
+      <div class="row">
+        <div class="segmented" role="group" aria-label="Mode">
+          <button id="modeIdeal" class="seg active" type="button">Ідеальний маршрут</button>
+          <button id="modeTest" class="seg" type="button">Перевірка памʼяті</button>
+        </div>
+        <label class="select">
+          <span>Маршрут</span>
+          <select id="routeSelect">
+            <option value="0">Маршрут 1</option>
+            <option value="1">Маршрут 2</option>
+            <option value="2">Маршрут 3</option>
+          </select>
+        </label>
+        <label class="select">
+          <span>Товщина лінії</span>
+          <input id="strokeSize" type="range" min="2" max="16" value="6" />
+        </label>
+        <label class="select">
+          <span>Поріг збігу</span>
+          <input id="tolerance" type="range" min="2" max="15" value="6" />
+        </label>
+        <details class="settings">
+          <summary>Налаштування</summary>
+          <div class="settings-body">
+            <label class="check">
+              <input id="clickDraw" type="checkbox" />
+              Малювати кліком (без утримання)
+            </label>
+            <label class="check">
+              <input id="smoothPath" type="checkbox" />
+              Згладжувати лінію
+            </label>
+            <label class="check">
+              <input id="refAdjustMode" type="checkbox" />
+              Режим корекції референсу
+            </label>
+            <label class="select">
+              <span>Opacity референсу</span>
+              <input id="refOpacity" type="range" min="5" max="80" value="35" />
+            </label>
+            <label class="select">
+              <span>Масштаб референсу</span>
+              <input id="refScale" type="range" min="60" max="140" value="100" />
+            </label>
+            <label class="select">
+              <span>Поворот (градуси)</span>
+              <input id="refRotate" type="range" min="-20" max="20" value="0" />
+            </label>
+            <label class="select">
+              <span>Масштаб карти</span>
+              <input id="mapScale" type="range" min="60" max="140" value="100" />
+            </label>
+            <label class="select">
+              <span>Зсув X</span>
+              <input id="refShiftX" type="range" min="-200" max="200" value="0" />
+            </label>
+            <label class="select">
+              <span>Зсув Y</span>
+              <input id="refShiftY" type="range" min="-200" max="200" value="0" />
+            </label>
+            <button id="refReset" class="btn ghost" type="button">Скинути референс</button>
+          </div>
+        </details>
+      </div>
+      <div class="row">
+        <button id="clearCurrent" class="btn" type="button">Очистити поточний</button>
+        <button id="clearIdeal" class="btn ghost" type="button">Очистити ідеальний</button>
+        <button id="toggleIdeal" class="btn ghost" type="button">Показати ідеальний</button>
+        <button id="toggleRef" class="btn ghost" type="button">Показати референс</button>
+        <button id="toggleRefSide" class="btn ghost" type="button">Референс поруч</button>
+        <button id="toggleFullscreen" class="btn ghost" type="button">Повний екран</button>
+        <button id="clearAll" class="btn danger" type="button">Очистити все</button>
+        <div id="result" class="result">Готово</div>
+      </div>
+    </section>
+
+    <section class="canvas-wrap">
+      <div class="workspace" id="workspace">
+        <div class="canvas-frame">
+          <canvas id="canvas"></canvas>
+          <div id="emptyHint" class="empty-hint">Завантаж мапу, щоб почати</div>
+        </div>
+        <aside id="refSide" class="ref-side">
+          <div class="ref-title">Референс маршруту</div>
+          <img id="refSideImg" alt="Референс маршруту" />
+        </aside>
+      </div>
+      <div class="fullscreen-controls">
+        <button id="resetFullscreen" class="btn ghost" type="button">Скинути екран</button>
+      </div>
+    </section>
+
+    <section class="legend">
+      <div class="legend-item"><span class="dot ideal"></span>Ідеальний маршрут</div>
+      <div class="legend-item"><span class="dot attempt"></span>Те, що ти намалював</div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
