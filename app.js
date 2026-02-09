@@ -68,6 +68,11 @@ let draggingRef = false;
 let dragStart = { x: 0, y: 0 };
 let dragOrigin = { x: 0, y: 0 };
 let isFullscreen = false;
+let lastPointerType = "mouse";
+let appendIdeal = false;
+let pinchActive = false;
+let pinchStartDist = 0;
+let pinchStartScale = 100;
 
 let refImages = [null, null, null];
 let refReady = [false, false, false];
@@ -196,7 +201,7 @@ function resizeCanvas() {
   const frame = canvas.parentElement.getBoundingClientRect();
   const maxWidth = frame.width;
   const fitScale = Math.min(1, maxWidth / bgImage.naturalWidth);
-  const userScale = isFullscreen ? state.mapScale / 100 : 1;
+  const userScale = state.mapScale / 100;
   const cssWidth = Math.round(bgImage.naturalWidth * fitScale * userScale);
   const cssHeight = Math.round(bgImage.naturalHeight * fitScale * userScale);
 
@@ -458,7 +463,13 @@ function finalizePath() {
   const route = getRoute();
   const normalized = normalizePath(currentPath);
   if (state.mode === "ideal") {
-    route.ideal = normalized;
+    if (appendIdeal && route.ideal.length > 1) {
+      const existing = route.ideal.slice();
+      const toAppend = normalized.slice(1);
+      route.ideal = existing.concat(toAppend);
+    } else {
+      route.ideal = normalized;
+    }
     result.textContent = "Ідеальний маршрут збережено";
   } else {
     route.attempt = normalized;
@@ -474,6 +485,7 @@ function finalizePath() {
   }
   saveState();
   currentPath = [];
+  appendIdeal = false;
   render();
 }
 
@@ -531,6 +543,8 @@ function updateRefShiftLimits() {
 canvas.addEventListener("pointerdown", (evt) => {
   if (!bgImage) return;
   evt.preventDefault();
+  if (pinchActive) return;
+  lastPointerType = evt.pointerType || "mouse";
   if (state.mode === "ideal" && state.showRef && state.refAdjustMode) {
     draggingRef = true;
     dragStart = toCanvasPoint(evt);
@@ -543,6 +557,15 @@ canvas.addEventListener("pointerdown", (evt) => {
     if (!drawing) {
       drawing = true;
       currentPath = [];
+      appendIdeal = false;
+      if (state.mode === "ideal") {
+        const route = getRoute();
+        if (route.ideal.length > 1) {
+          const last = denormalizePath(route.ideal).slice(-1)[0];
+          currentPath.push(last);
+          appendIdeal = true;
+        }
+      }
       canvas.setPointerCapture(evt.pointerId);
       addPoint(toCanvasPoint(evt));
     } else {
@@ -553,12 +576,22 @@ canvas.addEventListener("pointerdown", (evt) => {
   } else {
     drawing = true;
     currentPath = [];
+    appendIdeal = false;
+    if (state.mode === "ideal") {
+      const route = getRoute();
+      if (route.ideal.length > 1) {
+        const last = denormalizePath(route.ideal).slice(-1)[0];
+        currentPath.push(last);
+        appendIdeal = true;
+      }
+    }
     addPoint(toCanvasPoint(evt));
   }
 });
 
 canvas.addEventListener("pointermove", (evt) => {
   evt.preventDefault();
+  if (pinchActive) return;
   if (draggingRef) {
     const p = toCanvasPoint(evt);
     const dx = p.x - dragStart.x;
@@ -582,7 +615,9 @@ canvas.addEventListener("pointerup", () => {
     draggingRef = false;
     return;
   }
-  if (!drawing || state.clickToDraw) return;
+  if (pinchActive) return;
+  if (!drawing) return;
+  if (state.clickToDraw && lastPointerType !== "touch") return;
   drawing = false;
   finalizePath();
 });
@@ -592,14 +627,58 @@ canvas.addEventListener("pointerleave", () => {
     draggingRef = false;
     return;
   }
-  if (!drawing || state.clickToDraw) return;
+  if (pinchActive) return;
+  if (!drawing) return;
+  if (state.clickToDraw && lastPointerType !== "touch") return;
   drawing = false;
   finalizePath();
 });
 
-canvas.addEventListener("touchstart", (evt) => evt.preventDefault(), { passive: false });
-canvas.addEventListener("touchmove", (evt) => evt.preventDefault(), { passive: false });
-canvas.addEventListener("touchend", (evt) => evt.preventDefault(), { passive: false });
+function getPinchDistance(touches) {
+  const dx = touches[0].clientX - touches[1].clientX;
+  const dy = touches[0].clientY - touches[1].clientY;
+  return Math.hypot(dx, dy);
+}
+
+canvas.addEventListener(
+  "touchstart",
+  (evt) => {
+    evt.preventDefault();
+    if (evt.touches.length === 2) {
+      pinchActive = true;
+      drawing = false;
+      currentPath = [];
+      pinchStartDist = getPinchDistance(evt.touches);
+      pinchStartScale = state.mapScale;
+    }
+  },
+  { passive: false }
+);
+
+canvas.addEventListener(
+  "touchmove",
+  (evt) => {
+    evt.preventDefault();
+    if (!pinchActive || evt.touches.length !== 2) return;
+    const dist = getPinchDistance(evt.touches);
+    const scale = (dist / pinchStartDist) * pinchStartScale;
+    state.mapScale = Math.min(200, Math.max(60, Math.round(scale)));
+    mapScale.value = state.mapScale;
+    saveState();
+    resizeCanvas();
+    render();
+  },
+  { passive: false }
+);
+
+canvas.addEventListener(
+  "touchend",
+  (evt) => {
+    evt.preventDefault();
+    if (evt.touches.length < 2) pinchActive = false;
+  },
+  { passive: false }
+);
 
 window.addEventListener("resize", () => {
   resizeCanvas();
